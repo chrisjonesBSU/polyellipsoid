@@ -19,6 +19,12 @@ class Simulation:
         Parallel length for Gay-Berne pair potential
     bond_k : float, required
         Spring constant for hoomd.md.bond.Harmonic force
+        The bond legnth set in polyellipsoid.system.System is used
+        as the equilibrium bond length
+    angle_k : float, required
+        Spring constant for hoomd.md.angle.Harmonic force
+    theta0 : float, required
+        Equilibrium angle (in radians) for hoomd.md.angle.Harmonic force
     r_cut : float, required
         Cutoff radius for potentials (in simulation distance units)
     tau : float, optional, default 0.1
@@ -52,6 +58,8 @@ class Simulation:
             lperp,
             lpar,
             bond_k,
+            angle_k,
+            theta0,
             r_cut,
             tau=0.1,
             dt=0.001,
@@ -79,7 +87,7 @@ class Simulation:
         )
         self.sim.create_state_from_snapshot(self.snapshot)
 
-        # Set up forces, GB pair and harmonic bond:
+        # Set up forces, GB pair forces:
         nl = hoomd.md.nlist.Cell(buffer=0.40)
         gb = hoomd.md.pair.aniso.GayBerne(nlist=nl, default_r_cut=r_cut)
         gb.params[('R', 'R')] = dict(epsilon=epsilon, lperp=lperp, lpar=lpar)
@@ -90,9 +98,13 @@ class Simulation:
             gb.params[pair] = dict(epsilon=0.0, lperp=0.0, lpar=0.0)
         
         # Set up harmonic bond force
-        harmonic = hoomd.md.bond.Harmonic()
-        harmonic.params["CT-CH"] = dict(k=bond_k, r0=self.system.bond_length)
-        harmonic.params["CH-CT"] = dict(k=bond_k, r0=self.system.bond_length)
+        bharmonic = hoomd.md.bond.Harmonic()
+        bharmonic.params["CT-CH"] = dict(k=bond_k, r0=self.system.bond_length)
+        bharmonic.params["CH-CT"] = dict(k=bond_k, r0=self.system.bond_length)
+        
+        # Set up harmonic angle force
+        aharmonic = hoomd.md.angle.Harmonic()
+        aharmonic.params["CT-CH-CT"] = dict(k=angle_k, t0=theta0)
 
         # Set up rigid object for Hoomd
         # Find the first 2 non-rigid particles (i.e. constiuent particles)
@@ -129,12 +141,12 @@ class Simulation:
         self.integrator = hoomd.md.Integrator(
                 dt=dt, integrate_rotational_dof=True
         )
-        self.integrator.forces = [gb, harmonic]
+        self.integrator.forces = [gb, bharmonic, aharmonic]
         self.integrator.rigid=rigid
 
         # Set up gsd and log writers
         gsd_writer, table_file = self._hoomd_writers(
-                group=self.all, forcefields=[gb, harmonic]
+                group=self.all, forcefields=[gb, bharmonic, aharmonic]
         )
         self.sim.operations.writers.append(gsd_writer)
         self.sim.operations.writers.append(table_file)
