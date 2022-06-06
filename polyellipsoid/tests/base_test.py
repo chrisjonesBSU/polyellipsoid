@@ -31,7 +31,9 @@ class BaseTest:
                 tau=0.01,
                 dt=0.001,
                 r_cut=2.5,
-                bond_k=100000,
+                bond_k=1000,
+                angle_k=500,
+                theta0=2.5,
                 seed=42,
                 gsd_write=10000,
                 log_write=100

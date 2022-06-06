@@ -15,6 +15,8 @@ class TestSimulate(BaseTest):
                 dt=0.001,
                 r_cut=2.0,
                 bond_k=1000,
+                angle_k=100,
+                theta0 = 2.5,
                 seed=42,
                 gsd_write=1000,
                 log_write=100
