@@ -2,6 +2,7 @@ from polyellipsoid import Ellipsoid, Polymer
 from polyellipsoid.utils import base_units
 
 import hoomd
+import gmso
 import mbuild as mb
 from mbuild.formats.hoomd_forcefield import to_hoomdsnapshot
 import numpy as np
@@ -88,12 +89,12 @@ class System:
         )
         # TODO: Remove this attribute, using now for easy visualizing
         self.mb_system = system
-        self.snapshot = self._make_rigid_snapshot(system)
+        self.snapshot = self._make_rigid_snapshot(
+                self._convert_to_parmed(system)
+        )
 
     def stack(self, x, y, n, vector, z_axis_adjust=1.0):
-        """Arranges chains in layers on an n x n lattice.
-
-        """
+        """Arranges chains in layers on an n x n lattice."""
         if self.n_chains[0] != n*n*2:
             raise ValueError(
                     "Using this method creates a system of n x n "
@@ -123,7 +124,9 @@ class System:
         bounding_box = system.get_boundingbox().lengths
         target_z = bounding_box[-1] * z_axis_adjust
         self.set_target_box(z_constraint=target_z)
-        self.snapshot = self._make_rigid_snapshot(system)
+        self.snapshot = self._make_rigid_snapshot(
+                self._convert_to_parmed(system)
+        )
 
     def set_target_box(
             self,
@@ -138,7 +141,7 @@ class System:
         constant and adjust others to match the target density.
 
         Parameters
-        -----------
+        ----------
         x_constraint : float, optional, defualt=None
             Fixes the box length along the x axis
         y_constraint : float, optional, default=None
@@ -187,32 +190,44 @@ class System:
         L *= units["cm_to_nm"]  # convert cm to nm
         return L
 
-    def _make_rigid_snapshot(self, mb_system):
+    def _convert_to_parmed(self, mb_system):
+        """Uses gmso to add angles, and create a parmed object"""
+        particle_mass = mb_system[0].mass
+        sys_gmso = mb_system.to_gmso()
+        sys_gmso.identify_connections()
+        comp_pmd = gmso.external.to_parmed(sys_gmso)
+        for a in comp_pmd.atoms:
+            a.type = a.name
+            a.mass = particle_mass
+        return comp_pmd
+
+    def _make_rigid_snapshot(self, pmd_system):
         """Handles requirements for setting up a snapshot
-        to run a rigid body simulation in Hoomd
+        to run a rigid body simulation in Hoomd.
 
         Parameters
         ----------
-        mb_system : required
-            mBuild system created in the pack and stack functions
+        pmd_system : required
+            pmd system created by _convert_to_parmed 
 
         """
         init_snap = hoomd.Snapshot()
         init_snap.particles.types = ["R"]
         init_snap.particles.N = self.n_beads
         snapshot, refs = to_hoomdsnapshot(
-                mb_system, hoomd_snapshot=init_snap
+                pmd_system, hoomd_snapshot=init_snap
         )
 		# Get head-tail pair indices	
-        pair_idx = [(i,i+1) for i in range(
-            self.n_beads, snapshot.particles.N, 2
+        pair_idx = [(i, i+1, i+2) for i in range(
+            self.n_beads, snapshot.particles.N, 3 
         )]
         # Set position of rigid centers, set rigid body attr	
         for idx, pair in enumerate(pair_idx):
             pos1 = snapshot.particles.position[pair[0]]
             pos2 = snapshot.particles.position[pair[1]]
+            pos3 = snapshot.particles.position[pair[2]]
             # Update rigid center position based on its constituent particles
-            snapshot.particles.position[idx] = np.mean([pos1, pos2], axis=0)
+            snapshot.particles.position[idx] = np.mean([pos1, pos2, pos3], axis=0)
             snapshot.particles.body[idx] = idx
             snapshot.particles.body[list(pair)] = idx * np.ones_like(pair)
         return snapshot	

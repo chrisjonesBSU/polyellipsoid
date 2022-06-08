@@ -19,9 +19,9 @@ class Ellipsoid(Compound):
         self.minor_axis = np.array(minor_axis)
         self.major_length = float(major_length)
         self.minor_length = minor_length
-        n_particles = 2
+        n_particles = 3 
         if minor_length and minor_axis:
-            n_particles = 4 
+            n_particles = 5 
         
         # Create the constituent particles
         self.head = Compound(
@@ -34,7 +34,14 @@ class Ellipsoid(Compound):
                 name="CT",
                 mass=mass/n_particles
         )
-        self.add([self.head, self.tail])
+        self.mid = Compound(
+                pos=np.array([0,0,0]),
+                name="CC",
+                mass=mass/n_particles
+        )
+
+        self.add([self.head, self.mid, self.tail])
+        self.add_bond([self.mid, self.head])
         
         #TODO: Take this out until there is a need?
         if minor_length and minor_axis:
@@ -58,10 +65,10 @@ class Polymer(Polymer):
     def add_bead(self, bead, bond_axis, separation):
         #TODO: Take out bond axis option?
         if bond_axis.lower() == "major":
-            bead_indices = [0, 1]
+            bead_indices = [0, -1]
             orientation = [bead.major_axis, -bead.major_axis]
         elif bond_axis.lower() == "minor":
-            bead_indices = [2, 3]
+            bead_indices = [3, 4]
             orientation = [bead.minor_axis, -bead.minor_axis]
         
         self.add_monomer(

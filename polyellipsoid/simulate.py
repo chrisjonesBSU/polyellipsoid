@@ -92,7 +92,15 @@ class Simulation:
         gb = hoomd.md.pair.aniso.GayBerne(nlist=nl, default_r_cut=r_cut)
         gb.params[('R', 'R')] = dict(epsilon=epsilon, lperp=lperp, lpar=lpar)
         zero_pairs = [
-                ('CT','CT'), ('CH','CT'), ('CH','CH'), ('CT','R'), ('CH','R')
+                ('CT','CT'),
+                ('CH','CT'),
+                ('CH','CH'),
+                ('CT','R'),
+                ('CH','R'),
+                ('CC','CC'),
+                ('CC','CT'),
+                ('CC','CH'),
+                ('CC','R'),
         ]
         for pair in zero_pairs:
             gb.params[pair] = dict(epsilon=0.0, lperp=0.0, lpar=0.0)
@@ -101,14 +109,19 @@ class Simulation:
         bharmonic = hoomd.md.bond.Harmonic()
         bharmonic.params["CT-CH"] = dict(k=bond_k, r0=self.system.bond_length)
         bharmonic.params["CH-CT"] = dict(k=bond_k, r0=self.system.bond_length)
+        bharmonic.params["CC-CH"] = dict(k=0, r0=1)
         
         # Set up harmonic angle force
         aharmonic = hoomd.md.angle.Harmonic()
-        aharmonic.params["CT-CH-CT"] = dict(k=angle_k, t0=theta0)
+        aharmonic.params["CC-CH-CT"] = dict(k=angle_k, t0=theta0)
 
         # Set up rigid object for Hoomd
-        # Find the first 2 non-rigid particles (i.e. constiuent particles)
-        inds = [self.system.n_beads, self.system.n_beads + 1]
+        # Find the first 3 non-rigid particles (i.e. constiuent particles)
+        inds = [
+                self.system.n_beads,
+                self.system.n_beads + 1,
+                self.system.n_beads + 2
+        ]
         rigid = hoomd.md.constrain.Rigid()
         r_pos = self.snapshot.particles.position[0]
         c_pos = self.snapshot.particles.position[inds]
@@ -121,7 +134,7 @@ class Simulation:
         c_orient = [tuple(i) for i in self.snapshot.particles.orientation[inds]]
         c_charge = [i for i in self.snapshot.particles.charge[inds]]
         c_diam = [i for i in self.snapshot.particles.diameter[inds]]
-        mass = np.array([self.system.bead_mass/2]*2)
+        mass = np.array([self.system.bead_mass/3]*3)
         _moit = moit(c_pos, mass)
         self.snapshot.particles.moment_inertia[0:self.system.n_beads] = _moit
 
