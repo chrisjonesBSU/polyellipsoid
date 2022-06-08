@@ -56,7 +56,7 @@ class TestSystem(BaseTest):
             assert packed_system.snapshot.particles.types[ids[i]] == "R"
 
     def test_snapshot(self, packed_system):
-        assert packed_system.snapshot.particles.N == packed_system.n_beads * 3 
+        assert packed_system.snapshot.particles.N == packed_system.n_beads * 4 
 
     def test_pack(self):
         sys = System(
