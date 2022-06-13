@@ -140,6 +140,7 @@ class Simulation:
         c_diam = [i for i in self.snapshot.particles.diameter[inds]]
         mass = np.array([self.system.bead_mass/3]*3)
         _moit = moit(c_pos, mass)
+        _moit[0] = 1
         self.snapshot.particles.moment_inertia[0:self.system.n_beads] = _moit
 
         rigid.body["R"] = {
@@ -151,7 +152,7 @@ class Simulation:
         }
         
         # Set up hoomd groups 
-        self.centers = hoomd.filter.Rigid()
+        self.centers = hoomd.filter.Rigid(("center", "free"))
         self.all = hoomd.filter.All()
 
         # Set up integrator; method is added in the 3 sim functions

@@ -217,6 +217,7 @@ class System:
         snapshot, refs = to_hoomdsnapshot(
                 pmd_system, hoomd_snapshot=init_snap
         )
+        snapshot.particles.mass[0:self.n_beads] = self.bead_mass
 		# Get head-tail pair indices	
         pair_idx = [(i, i+1, i+2) for i in range(
             self.n_beads, snapshot.particles.N, 3 
