@@ -88,9 +88,13 @@ class Simulation:
         self.sim.create_state_from_snapshot(self.snapshot)
 
         # Set up forces, GB pair forces:
-        nl = hoomd.md.nlist.Cell(buffer=0.40)
-        gb = hoomd.md.pair.aniso.GayBerne(nlist=nl, default_r_cut=r_cut)
-        gb.params[('R', 'R')] = dict(epsilon=epsilon, lperp=lperp, lpar=lpar)
+        self.nlist = hoomd.md.nlist.Cell(buffer=0.40)
+        self.gb = hoomd.md.pair.aniso.GayBerne(
+                nlist=self.nlist, default_r_cut=r_cut
+        )
+        self.gb.params[('R', 'R')] = dict(
+                epsilon=epsilon, lperp=lperp, lpar=lpar
+        )
         zero_pairs = [
                 ('CT','CT'),
                 ('CH','CT'),
@@ -103,17 +107,17 @@ class Simulation:
                 ('CC','R'),
         ]
         for pair in zero_pairs:
-            gb.params[pair] = dict(epsilon=0.0, lperp=0.0, lpar=0.0)
+            self.gb.params[pair] = dict(epsilon=0.0, lperp=0.0, lpar=0.0)
         
         # Set up harmonic bond force
-        bharmonic = hoomd.md.bond.Harmonic()
-        bharmonic.params["CT-CH"] = dict(k=bond_k, r0=self.system.bond_length)
-        bharmonic.params["CH-CT"] = dict(k=bond_k, r0=self.system.bond_length)
-        bharmonic.params["CC-CH"] = dict(k=0, r0=1)
+        self.bharmonic = hoomd.md.bond.Harmonic()
+        self.bharmonic.params["CT-CH"] = dict(k=bond_k, r0=self.system.bond_length)
+        self.bharmonic.params["CH-CT"] = dict(k=bond_k, r0=self.system.bond_length)
+        self.bharmonic.params["CC-CH"] = dict(k=0, r0=1)
         
         # Set up harmonic angle force
-        aharmonic = hoomd.md.angle.Harmonic()
-        aharmonic.params["CC-CH-CT"] = dict(k=angle_k, t0=theta0)
+        #self.aharmonic = hoomd.md.angle.Harmonic()
+        #self.aharmonic.params["CC-CH-CT"] = dict(k=angle_k, t0=theta0)
 
         # Set up rigid object for Hoomd
         # Find the first 3 non-rigid particles (i.e. constiuent particles)
@@ -154,17 +158,19 @@ class Simulation:
         self.integrator = hoomd.md.Integrator(
                 dt=dt, integrate_rotational_dof=True
         )
-        self.integrator.forces = [gb, bharmonic, aharmonic]
+        #self.forcefield = [self.gb, self.bharmonic, self.aharmonic]
+        self.forcefield = [self.gb, self.bharmonic]
+        self.integrator.forces = self.forcefield 
         self.integrator.rigid=rigid
 
         # Set up gsd and log writers
         gsd_writer, table_file = self._hoomd_writers(
-                group=self.all, forcefields=[gb, bharmonic, aharmonic]
+                group=self.all, forcefields=self.forcefield
         )
         self.sim.operations.writers.append(gsd_writer)
         self.sim.operations.writers.append(table_file)
 
-    def shrink(self, kT, n_steps, shrink_period=10):
+    def shrink(self, kT, n_steps, shrink_period=10, tree_nlist=False):
         """Run a shrink simulation to reach a target volume.
 
         Parameters
@@ -177,6 +183,7 @@ class Simulation:
             Number of steps to run between box updates
 
         """
+
         # Set up box resizer
         box_resize_trigger = hoomd.trigger.Periodic(shrink_period)
         ramp = hoomd.variant.Ramp(
@@ -201,9 +208,22 @@ class Simulation:
         )
         self.integrator.methods = [integrator_method]
         self.sim.operations.add(self.integrator)
+
+        # Set Tree nlist if self.nlist is Cell and tree_nlist=True
+        if tree_nlist and isinstance(self.nlist, hoomd.md.nlist.Cell):
+            original_nlist = self.forcefield[0].nlist 
+            shrink_nlist = hoomd.md.nlist.Tree(buffer=0.4)
+            shrink_nlist.exclusions = self.nlist.exclusions
+            self.sim.operations.integrator.forces[0].nlist = shrink_nlist
+
         self.sim.state.thermalize_particle_momenta(filter=self.centers, kT=kT)
         self.sim.run(n_steps + 1) 
         self.ran_shrink = True
+
+        if tree_nlist and isinstance(self.nlist, hoomd.md.nlist.Cell):
+            self.sim.operations.integrator.forces.remove(self.gb)
+            self.gb.nlist = self.nlist 
+            self.sim.operations.integrator.forces = self.forcefield
 
     def quench(self, kT, n_steps):
         """Run a simulation at a single temperature.
