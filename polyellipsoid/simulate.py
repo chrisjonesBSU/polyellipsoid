@@ -121,17 +121,18 @@ class Simulation:
                 "diameters": c_diam
         }
         rigid.create_bodies(self.sim.state) 
-        # Set up hoomd groups 
-        self.centers = hoomd.filter.Rigid()
-        self.all = hoomd.filter.All()
 
         # Set up integrator; method is added in the 3 sim functions
+        self.centers = hoomd.filter.Rigid(("center", "free"))
+        self.all = hoomd.filter.All()
         self.integrator = hoomd.md.Integrator(
                 dt=dt, integrate_rotational_dof=True
         )
-        self.integrator.forces = [gb, harmonic]
         self.integrator.rigid=rigid
 
+        # Set up hoomd groups 
+
+        self.integrator.forces = [gb, harmonic]
         # Set up gsd and log writers
         gsd_writer, table_file = self._hoomd_writers(
                 group=self.all, forcefields=[gb, harmonic]
