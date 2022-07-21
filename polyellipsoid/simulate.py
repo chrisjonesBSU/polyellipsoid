@@ -49,8 +49,10 @@ class Simulation:
             self,
             system,
             epsilon,
-            lperp,
-            lpar,
+            sigma_i,
+            sigma_j,
+            alpha,
+            rounding_radii,
             bond_k,
             r_cut,
             tau=0.1,
@@ -61,6 +63,11 @@ class Simulation:
     ):
         self.system = system
         self.snapshot = system.snapshot
+        self.epsilon = epsilon
+        self.sigma_i = sigma_i
+        self.sigma_j = sigma_j
+        self.alpha = alpha
+        self.rounding_radii = rounding_radii
         self.tau = tau
         self.gsd_write = gsd_write
         self.log_write = log_write
@@ -81,13 +88,33 @@ class Simulation:
 
         # Set up forces, GB pair and harmonic bond:
         nl = hoomd.md.nlist.Cell(buffer=0.40)
-        gb = hoomd.md.pair.aniso.GayBerne(nlist=nl, default_r_cut=r_cut)
-        gb.params[('R', 'R')] = dict(epsilon=epsilon, lperp=lperp, lpar=lpar)
+        alj = hoomd.md.pair.aniso.ALJ(nlist=nl, default_r_cut=r_cut)
+        alj.params[('R', 'R')] = dict(
+                epsilon=self.epsilon,
+                sigma_i=self.sigma_i,
+                sigma_j=self.sigma_j,
+                alpha=self.alpha
+        )
+        alj.shape['R'] = dict(
+                rounding_radii=self.rounding_radii,
+                vertices=[],
+                faces=[]
+        ) 
         zero_pairs = [
                 ('CT','CT'), ('CH','CT'), ('CH','CH'), ('CT','R'), ('CH','R')
         ]
         for pair in zero_pairs:
-            gb.params[pair] = dict(epsilon=0.0, lperp=0.0, lpar=0.0)
+            alj.params[pair] = dict(
+                    epsilon=0,
+                    sigma_i=0,
+                    sigma_j=0,
+                    alpha=self.alpha
+            )
+            alj.shape[pair] = dict(
+                    rounding_radii=self.rounding_radii,
+                    vertices=[],
+                    faces=[]
+            ) 
         
         # Set up harmonic bond force
         harmonic = hoomd.md.bond.Harmonic()
@@ -129,12 +156,12 @@ class Simulation:
         self.integrator = hoomd.md.Integrator(
                 dt=dt, integrate_rotational_dof=True
         )
-        self.integrator.forces = [gb, harmonic]
+        self.integrator.forces = [alj, harmonic]
         self.integrator.rigid=rigid
 
         # Set up gsd and log writers
         gsd_writer, table_file = self._hoomd_writers(
-                group=self.all, forcefields=[gb, harmonic]
+                group=self.all, forcefields=[alj, harmonic]
         )
         self.sim.operations.writers.append(gsd_writer)
         self.sim.operations.writers.append(table_file)
