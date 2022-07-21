@@ -120,7 +120,7 @@ class Simulation:
                 "charges": c_charge,
                 "diameters": c_diam
         }
-        
+        rigid.create_bodies(self.sim.state) 
         # Set up hoomd groups 
         self.centers = hoomd.filter.Rigid()
         self.all = hoomd.filter.All()

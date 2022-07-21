@@ -200,8 +200,9 @@ class System:
         init_snap = hoomd.Snapshot()
         init_snap.particles.types = ["R"]
         init_snap.particles.N = self.n_beads
+        init_snap.particles.mass[:] = self.bead_mass
         snapshot, refs = to_hoomdsnapshot(
-                mb_system, hoomd_snapshot=init_snap
+                mb_system, hoomd_snapshot=init_snap, auto_scale=False
         )
 		# Get head-tail pair indices	
         pair_idx = [(i,i+1) for i in range(
@@ -209,6 +210,8 @@ class System:
         )]
         # Set position of rigid centers, set rigid body attr	
         for idx, pair in enumerate(pair_idx):
+            snapshot.particles.mass[pair[0]] = self.bead_mass/2
+            snapshot.particles.mass[pair[1]] = self.bead_mass/2
             pos1 = snapshot.particles.position[pair[0]]
             pos2 = snapshot.particles.position[pair[1]]
             # Update rigid center position based on its constituent particles
