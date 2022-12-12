@@ -3,7 +3,7 @@ from polyellipsoid.utils import base_units
 
 import hoomd
 import mbuild as mb
-from mbuild.formats.hoomd_forcefield import to_hoomdsnapshot
+from mbuild.formats.hoomd_snapshot import to_hoomdsnapshot
 from mbuild.lib.recipes.polymer import Polymer
 import numpy as np
 
