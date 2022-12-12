@@ -2,8 +2,8 @@ name: polyellipsoid
 channels:
   - conda-forge
 dependencies:
-  - freud
   - gmso
+  - freud
   - gsd
   - hoomd=*=*cpu*
   - mbuild
