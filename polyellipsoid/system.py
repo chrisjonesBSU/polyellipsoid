@@ -13,7 +13,7 @@ units = base_units.base_units()
 class System:
     """Constructs initial system configurations.
 
-    Uses Creates chains of polyellipsoid.Ellipsoid beads and organizes
+    Creates chains of polyellipsoid.Ellipsoid beads and organizes
     the chains into different initial configurations. The number of chains
     and their respective chain lengths can be controlled (i.e. creating
     polydisperse systems).
@@ -28,12 +28,14 @@ class System:
         The number of beads in the chain. If creating a polydisperse system,
         set a list of integers where the index corresponds to the index
         in the n_chains parameter
-    bead_mass : float; required
-        The desired mass of the beads. The bead mass is used in calculating
+    bead_length : float; required (angstroms)
+        The length of the bead along the bonding axis
+    bead_mass : float; required (amu)
+        The desired mass of the beads. The mass is used in calculating
         total system mass and simulation volumes to match the desired density.
     density: float; required (g/cm^3)
         The desired density of the system in g/cm^3.
-    bond_length : float, default=0.01 (nm)
+    bond_length : float, default=0.1 (angstroms)
         The distance between bonded anchor points of neighboring beads.
         Small values work best to avoid artifacts of bonded ghost particles
         freely rotating during the simulation.
@@ -59,7 +61,7 @@ class System:
             bead_length,
             bead_mass,
             density,
-            bond_length=.01,
+            bond_length=.1,
     ):
         if not isinstance(n_chains, list):
             n_chains = [n_chains]
@@ -112,9 +114,16 @@ class System:
         Parameters
         ----------
         box_expand_factor : float, default=5
-            The factor by which to expand the box edge lengths during
+            The value used to expand the box edge lengths during
             the packing step. If PACKMOL fails, you may need to
             increase this parameter.
+        
+        Note
+        ----
+        When using this system initialization method, the initial
+        simulation volume will be larger than your target density.
+        Use the run_shrink function in simulate.Simulation to shrink
+        the simulation volume to match the target density.
 
         """
         if self.target_box is None:
@@ -131,7 +140,20 @@ class System:
         self.mb_system.label_rigid_bodies(discrete_bodies="ellipsoid")
 
     def stack(self, y, z, n, vector, x_axis_adjust=1.0):
-        """Arranges chains in layers on an n x n lattice.
+        """Arranges chains in layers on an n x n lattice
+        with 2 chains per unit cell.
+        
+        Parameters
+        ----------
+        y : float; required
+            The lattice spacing between chains along the y direction
+        z : float; required
+            The lattice spacing between chains along the z direction
+        n : int: required
+            The number of times to repeat the unit cell in each direction.
+            The number of chains in the system must equal n^2 * 2
+        vector : array-like; required
+            The vector between lattice points 
 
         """
         if sum(self.n_chains) != n*n*2:

@@ -3,8 +3,21 @@ from mbuild import Compound
 
 class Ellipsoid(Compound):
     def __init__(self, mass, length):
+        """Creates a single ellipsoid monomer with the required ghost 
+        particles and rigid center. This class is called by the
+        polyellipsoid.System() when creating ellipsoid chains.
+
+        Parameters
+        ----------
+        mass : float; required
+            The mass of the ellipsoid bead in amu
+        length : float; required
+            The length of the ellipsoid bead along the bonding axis (nm)
+
+        """
         super(Ellipsoid, self).__init__(name="ellipsoid")
-        self.length = float(length)
+        # Convert length to nm while in mBuild space
+        self.length = float(length) / 10
         # Create the constituent particles
         self.head = Compound(
                 pos=[self.length/2, 0, 0],

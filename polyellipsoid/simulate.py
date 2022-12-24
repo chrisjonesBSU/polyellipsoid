@@ -107,7 +107,7 @@ class Simulation:
         for pair in zero_pairs:
             gb.params[pair] = dict(epsilon=0.0, lperp=0.0, lpar=0.0)
         self.forcefield.append(gb)
-
+        # Harmonic bonds
         harmonic_bond = hoomd.md.bond.Harmonic()
         harmonic_bond.params["A-A"] = dict(
                 k=bond_k, r0=self.system.bond_length * 10
@@ -116,15 +116,15 @@ class Simulation:
                 k=0, r0=(self.system.bead_length * 10) / 2
         )
         self.forcefield.append(harmonic_bond)
-
+        # Harmonic angles
         if all([angle_k, angle_theta]):
             harmonic_angle = hoomd.md.angle.Harmonic()
             harmonic_angle.params["B-B-B"] = dict(k=angle_k, t0=angle_theta)
             self.forcefield.append(harmonic_angle)
 
         self.all = hoomd.filter.Rigid(("center", "free"))
-        # Set up gsd and log writers
         self.integrator = None
+        # Set up gsd and log writers
         gsd_writer, table_file = self._hoomd_writers()
         self.sim.operations.writers.append(gsd_writer)
         self.sim.operations.writers.append(table_file)
@@ -133,15 +133,15 @@ class Simulation:
     def dt(self):
         return self._dt
 
-    @property 
-    def method(self):
-        return self.sim.operations.integrator.methods[0]
-
     @dt.setter
     def dt(self, value):
         self._dt = value 
         if self.integrator:
             self.sim.operations.integrator.dt = self._dt
+
+    @property 
+    def method(self):
+        return self.sim.operations.integrator.methods[0]
 
     def set_integrator_method(
             self,
@@ -160,12 +160,9 @@ class Simulation:
             self.sim.operations.integrator.methods = [new_method]
         # Update the existing integrator with a new method
         else:
-            self._update_integrator_method(integrator_method, method_kwargs)
-
-    def _update_integrator_method(self, integrator_method, method_kwargs):
-        self.integrator.methods.remove(self.method)
-        new_method = integrator_method(**method_kwargs)
-        self.integrator.methods.append(new_method)
+            self.integrator.methods.remove(self.method)
+            new_method = integrator_method(**method_kwargs)
+            self.integrator.methods.append(new_method)
 
     def run_shrink(
             self,
