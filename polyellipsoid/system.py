@@ -97,11 +97,12 @@ class System:
                         separation=self.bond_length
                 )
                 chain.build(n=l, add_hydrogens=False)
+                # Generate bonds, divide by 10 to convert from Ang. to nm
                 chain.freud_generate_bonds(
                         name_a="B",
                         name_b="B",
-                        dmin=self.bead_length / 2 - 0.1, 
-                        dmax=self.bead_length / 2 + bond_length + 0.1 
+                        dmin=self.bead_length / (2*10) - 0.1, 
+                        dmax=self.bead_length / (2*10) + bond_length/10 + 0.1 
                 )
                 self.chains.append(chain)
 
@@ -179,7 +180,7 @@ class System:
                     next_idx += 2
                 except IndexError:
                     pass
-            layer.translate((0, 0, z*1)) # shift layers along x dir
+            layer.translate((0, 0, z*i)) # shift layers along x dir
             self.mb_system.add(layer)
 
         bounding_box = np.array(self.mb_system.get_boundingbox().lengths)
