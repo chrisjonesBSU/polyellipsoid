@@ -178,7 +178,7 @@ class Simulation:
         box_ramp = hoomd.variant.Ramp(
                 A=0, B=1, t_start=0, t_ramp=int(n_steps)
         )
-        # Convert from nm (mbuild units, used in System()) to Angstrom
+        # Convert from nm (mbuild units, used in polyellipsoid.System) to Ang.
         self.target_box = hoomd.Box(
                 Lx=self.system.target_box[0] * 10,
                 Ly=self.system.target_box[1] * 10,
