@@ -1,4 +1,5 @@
 from mbuild import Compound
+from mbuild.lib.recipes.polymer import Polymer
 
 
 class Ellipsoid(Compound):
@@ -27,3 +28,15 @@ class Ellipsoid(Compound):
                 mass=mass/4
         )
         self.add([self.head, self.tail, self.head_mid, self.tail_mid])
+
+
+class Chain(Polymer):
+    def __init__(lengths, bead_mass, bead_length, bond_length):
+        bead = Ellipsoid(mass=bead_mass, length=bead_length)
+        self.add_monomer(
+                bead,
+                indices=[0, 1],
+                orientaiton=[[1,0,0], [-1,0,0]],
+                replace=False,
+                separation=bond_length
+        )
