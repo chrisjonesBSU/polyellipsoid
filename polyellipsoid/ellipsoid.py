@@ -31,12 +31,14 @@ class Ellipsoid(Compound):
 
 
 class Chain(Polymer):
-    def __init__(lengths, bead_mass, bead_length, bond_length):
+    def __init__(self, length, bead_mass, bead_length, bond_length):
+        super(Chain, self).__init__()
         bead = Ellipsoid(mass=bead_mass, length=bead_length)
         self.add_monomer(
                 bead,
                 indices=[0, 1],
-                orientaiton=[[1,0,0], [-1,0,0]],
+                orientation=[[1,0,0], [-1,0,0]],
                 replace=False,
                 separation=bond_length
         )
+        self.build(n=length, add_hydrogens=False)
